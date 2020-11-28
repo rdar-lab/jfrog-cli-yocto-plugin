@@ -1,43 +1,43 @@
-# hello-frog
+# jfrog-cli-yocto-plugin
 
 ## About this plugin
-This plugin is a template and a functioning example for a basic JFrog CLI plugin. 
-This README shows the expected structure of your plugin's README.
+This plugin allows integrating Yocto builds to Jfrog platform
 
 ## Installation with JFrog CLI
 Installing the latest version:
 
-`$ jfrog plugin install hello-frog`
+`$ jfrog plugin install jfrog-cli-yocto-plugin`
 
 Installing a specific version:
 
-`$ jfrog plugin install hello-frog@version`
+`$ jfrog plugin install jfrog-cli-yocto-plugin@version`
 
 Uninstalling a plugin
 
-`$ jfrog plugin uninstall hello-frog`
+`$ jfrog plugin uninstall jfrog-cli-yocto-plugin`
 
 ## Usage
 ### Commands
-* hello
+* bake
     - Arguments:
-        - addressee - The name of the person you would like to greet.
+        - run-folder - The location of the root folder to run the process from.
+        - build-env - The location of the "oe-init-build-env" to init the build env from
+        - target - The bake target. Examples: core-image-base, core-image-minimal
     - Flags:
-        - shout: Makes output uppercase **[Default: false]**
-        - repeat: Greets multiple times **[Default: 1]**
+        - load: Load the resulting build to artifactory **[Default: true]**
+        - scan: Scan the result with Xray **[Default: false]**
     - Example:
     ```
-  $ jfrog hello-frog hello world --shout --repeat=2
+  $ jfrog jfrog-cli-yocto-plugin bake ./ oe-init-build-env core-image-minimal
   
-  NEW GREETING: HELLO WORLD!
-  NEW GREETING: HELLO WORLD!
+    Running pre steps. Running directory=./
+    Running Bit bake. target=core-image-minimal. This may take a long time....
+    Loading the result to Artifactory
+
   ```
 
 ### Environment variables
-* HELLO_FROG_GREET_PREFIX - Adds a prefix to every greet **[Default: New greeting: ]**
+None.
 
 ## Additional info
 None.
-
-## Release Notes
-The release notes are available [here](RELEASE.md).

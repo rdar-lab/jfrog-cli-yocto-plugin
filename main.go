@@ -12,8 +12,8 @@ func main() {
 
 func getApp() components.App {
 	app := components.App{}
-	app.Name = "hello-frog"
-	app.Description = "Easily greet anyone."
+	app.Name = "frog-docker"
+	app.Description = "Jfrog Yocto Build CLI tools"
 	app.Version = "v0.1.0"
 	app.Commands = getCommands()
 	return app
@@ -21,5 +21,5 @@ func getApp() components.App {
 
 func getCommands() []components.Command {
 	return []components.Command{
-		commands.GetHelloCommand()}
+		commands.GetBakeCommand()}
 }
