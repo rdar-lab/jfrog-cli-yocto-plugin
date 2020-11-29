@@ -24,8 +24,16 @@ Uninstalling a plugin
         - build-env - The location of the "oe-init-build-env" to init the build env from
         - target - The bake target. Examples: core-image-base, core-image-minimal
     - Flags:
+        - clean: Clean before the build, and clean the build-info on start **[Default: true]**
+        - build: Perform a build. should be true unless you want to bypass and manually build **[Default: true]**
         - load: Load the resulting build to artifactory **[Default: true]**
         - scan: Scan the result with Xray **[Default: false]**
+        - repo: Target repository to deploy to **[Default: yocto]**
+        - artifactName: Target name to deploy on
+        - buildName: The name of the build
+        - buildNum: The number of the build
+        - onlyImages: Deploy only the images of the build. **[Default: true]**
+            
     - Example:
     ```
   $ jfrog jfrog-cli-yocto-plugin bake ./ oe-init-build-env core-image-minimal
