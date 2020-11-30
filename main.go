@@ -12,8 +12,8 @@ func main() {
 
 func getApp() components.App {
 	app := components.App{}
-	app.Name = "frog-docker"
-	app.Description = "Jfrog Yocto Build CLI tools"
+	app.Name = "jfrog-yocto"
+	app.Description = "Jfrog Yocto Build CLI plugin"
 	app.Version = "v0.1.0"
 	app.Commands = getCommands()
 	return app

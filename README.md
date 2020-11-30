@@ -1,9 +1,23 @@
 # jfrog-cli-yocto-plugin
 
 ## About this plugin
-This plugin allows integrating Yocto builds to Jfrog platform
+This plugin allows integrating Yocto builds to Jfrog platform.
 
-## Installation with JFrog CLI
+#### What is Yocto?
+The Yocto Project (YP) is an open source collaboration project that helps developers create custom Linux-based systems regardless of the hardware architecture.
+
+The project provides a flexible set of tools and a space where embedded developers worldwide can share technologies, software stacks, configurations, and best practices that can be used to create tailored Linux images for embedded and IOT devices, or anywhere a customized Linux OS is needed.  
+
+#### Why to use Jfrog platform with Yocto?
+With the jfrog platform you can control the lifecycle and distribution of the IoT firmware 
+
+#### How to use this plugin?
+ This plugin will invoke the bitbake process and will then upload the build results to artifactory. 
+ It features:
+ * Easy integration with one command to invoke the full process
+ * Ability to deploy the artifacts to Artifactory and scan with Xray 
+
+## Installation with JFrog CLI Yocto Plugin
 Installing the latest version:
 
 `$ jfrog plugin install jfrog-cli-yocto-plugin`
@@ -48,4 +62,7 @@ Uninstalling a plugin
 None.
 
 ## Additional info
-None.
+Future improvements:
+* Using artifactory as sstate cache server
+* Xray scanning support
+* Hierarchical dependency graph

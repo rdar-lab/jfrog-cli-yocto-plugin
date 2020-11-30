@@ -29,11 +29,10 @@ const (
 	defaultModule    = "build"
 	defaultProject   = ""
 
+	tmpDirectory    = "/build/tmp"
+	lockFile        = "/build/bitbake.lock"
 	deployDirectory = "/build/tmp/deploy/"
 	imagesDirectory = "/build/tmp/deploy/images/"
-
-	bitbakeCleanCommand = "source oe-init-build-env bitbake && bitbake -c clean "
-	bitbakeBuildCommand = "source oe-init-build-env bitbake && bitbake "
 
 	uploadThreads = 10
 	uploadRetries = 5
@@ -186,7 +185,7 @@ func doBakeCommand(conf *bakeConfiguration) error {
 			return err
 		}
 
-		err = executeBitBake(conf)
+		err = executeBitBakeBuild(conf)
 		if err != nil {
 			return err
 		}
@@ -194,6 +193,11 @@ func doBakeCommand(conf *bakeConfiguration) error {
 
 	if conf.load {
 		rtDetails, err := config.GetDefaultArtifactoryConf()
+
+		if rtDetails == nil || rtDetails.Url == "" {
+			return errors.New("artifactory details are not set. please use 'jfrog rt ping' first")
+		}
+
 		if err != nil {
 			return err
 		}
@@ -214,7 +218,7 @@ func doBakeCommand(conf *bakeConfiguration) error {
 }
 
 func execCommand(folder string, command string) error {
-	cmd := exec.Command(command)
+	cmd := exec.Command("bash", "-c", command)
 	cmd.Dir = folder
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -225,16 +229,24 @@ func executePreSteps(conf *bakeConfiguration) error {
 	log.Output("Running pre steps. Running directory=" + conf.runFolder)
 
 	if conf.clean {
-		log.Output("Cleaning using bitbake. target=" + conf.target)
-		return execCommand(conf.runFolder, bitbakeCleanCommand+conf.target)
+		log.Output("Cleaning tmp folder")
+		err := os.RemoveAll(conf.runFolder + tmpDirectory)
+		if err != nil {
+			return err
+		}
+
+		err = os.Remove(conf.runFolder + lockFile)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func executeBitBake(conf *bakeConfiguration) error {
+func executeBitBakeBuild(conf *bakeConfiguration) error {
 	log.Output("Running Bit bake. target=" + conf.target + ". This may take a long time....")
-	return execCommand(conf.runFolder, bitbakeBuildCommand+conf.target)
+	return execCommand(conf.runFolder, "source "+conf.buildEnv+" && bitbake "+conf.target)
 }
 
 func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ArtifactoryDetails) error {
