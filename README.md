@@ -83,6 +83,12 @@ Uninstalling a plugin
 ### Environment variables
 None.
 
+## Screenshots
+##### Build artifacts
+![Alt text](doc/img/artifacts.png?raw=true "Artifacts")
+##### Build dependencies
+![Alt text](doc/img/dependencies.png?raw=true "Artifacts")
+
 ## Additional info
 Future improvements:
 * Using artifactory as sstate cache server
