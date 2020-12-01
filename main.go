@@ -21,5 +21,7 @@ func getApp() components.App {
 
 func getCommands() []components.Command {
 	return []components.Command{
-		commands.GetBakeCommand()}
+		commands.GetBakeCommand(),
+		commands.GetConfigCommand(),
+	}
 }

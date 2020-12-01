@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/jfrog/jfrog-cli-core/artifactory/commands"
 	"github.com/jfrog/jfrog-cli-core/artifactory/commands/buildinfo"
 	"github.com/jfrog/jfrog-cli-core/artifactory/commands/generic"
 	"github.com/jfrog/jfrog-cli-core/artifactory/spec"
@@ -38,6 +39,20 @@ const (
 	uploadRetries = 5
 )
 
+func GetConfigCommand() components.Command {
+	return components.Command{
+		Name:        "config",
+		Description: "Configure artifactory settings",
+		Aliases:     []string{"conf"},
+		Arguments:   []components.Argument{},
+		Flags:       []components.Flag{},
+		EnvVars:     []components.EnvVar{},
+		Action: func(c *components.Context) error {
+			return configCmd(c)
+		},
+	}
+}
+
 func GetBakeCommand() components.Command {
 	return components.Command{
 		Name:        "bake",
@@ -50,6 +65,12 @@ func GetBakeCommand() components.Command {
 			return bakeCmd(c)
 		},
 	}
+}
+
+func configCmd(c *components.Context) error {
+	artConfigCommand := commands.NewConfigCommand()
+	artConfigCommand.SetInteractive(true)
+	return artConfigCommand.Run()
 }
 
 func getBakeArguments() []components.Argument {
@@ -116,6 +137,11 @@ func getBakeFlags() []components.Flag {
 			Description:  "Upload only the images as the artifacts of the build",
 			DefaultValue: true,
 		},
+		components.StringFlag{
+			Name:         "artId",
+			Description:  "The artifactory server ID",
+			DefaultValue: "",
+		},
 	}
 }
 
@@ -136,6 +162,7 @@ type bakeConfiguration struct {
 	repo         string
 	artifactName string
 	onlyImages   bool
+	artId        string
 }
 
 func bakeCmd(c *components.Context) error {
@@ -155,6 +182,7 @@ func bakeCmd(c *components.Context) error {
 	conf.buildName = c.GetStringFlagValue("buildName")
 	conf.buildNum = c.GetStringFlagValue("buildNum")
 	conf.onlyImages = c.GetBoolFlagValue("onlyImages")
+	conf.artId = c.GetStringFlagValue("artId")
 
 	if conf.scan && !conf.load {
 		return errors.New("scanning can only be done after loading the result to Artifactory")
@@ -192,15 +220,32 @@ func doBakeCommand(conf *bakeConfiguration) error {
 	}
 
 	if conf.load {
-		rtDetails, err := config.GetDefaultArtifactoryConf()
-
-		if rtDetails == nil || rtDetails.Url == "" {
-			return errors.New("artifactory details are not set. please use 'jfrog rt ping' first")
-		}
+		artConfExists, err := config.IsArtifactoryConfExists()
 
 		if err != nil {
 			return err
 		}
+
+		if !artConfExists {
+			return errors.New("artifactory details are not set. please use 'conf' command first")
+		}
+
+		var rtDetails *config.ArtifactoryDetails
+
+		if conf.artId != "" {
+			rtDetails, err = config.GetArtifactorySpecificConfig(conf.artId, false, false)
+
+			if err != nil {
+				return err
+			}
+		} else {
+			rtDetails, err = config.GetDefaultArtifactoryConf()
+
+			if err != nil {
+				return err
+			}
+		}
+
 		err = loadResultToRT(conf, rtDetails)
 		if err != nil {
 			return err

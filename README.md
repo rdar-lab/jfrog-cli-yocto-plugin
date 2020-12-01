@@ -32,10 +32,14 @@ Uninstalling a plugin
 
 ## Usage
 ### Commands
+* configure
+    - Used to configure the artifactory instance connection details. 
+      This is an interactive command.
 * bake
+    - Used to build/deploy your yocto firmware 
     - Arguments:
         - run-folder - The location of the root folder to run the process from.
-        - build-env - The location of the "oe-init-build-env" to init the build env from
+        - build-env - The location of the "oe-init-build-env" to init the build env from.
         - target - The bake target. Examples: core-image-base, core-image-minimal
     - Flags:
         - clean: Clean before the build, and clean the build-info on start **[Default: true]**
@@ -47,6 +51,7 @@ Uninstalling a plugin
         - buildName: The name of the build
         - buildNum: The number of the build
         - onlyImages: Deploy only the images of the build. **[Default: true]**
+        - artId: The server ID for artifactory configuration **[Default: using default config]**
             
     - Example:
     ```
