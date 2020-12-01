@@ -26,7 +26,7 @@ The docker image is based on gmacario/build-yocto which provides all the build-i
     1. build the project
         CMD:  docker build -t jfrog-yocto-builder .
     2. git clone your yocto project src files to your local machine. 
-        Example: git clone -b jethro git://git.yoctoproject.org/poky
+        Example: git clone -b dunfell git://git.yoctoproject.org/poky
     3. Make sure you have a proper artifactory configururation on your running machine.
         Use 'jfrog rt config' to configure your server IP and authentication
     4. RUN: docker run --rm -it jfrog-yocto-builder \
