@@ -25,7 +25,7 @@ import (
 
 const (
 	defaultBuildName = "yocto-build"
-	defaultBuildNum  = "1.0"
+	defaultBuildNum  = "1"
 	defaultRepoName  = "yocto"
 	defaultModule    = "build"
 	defaultProject   = ""
@@ -76,14 +76,6 @@ func configCmd(c *components.Context) error {
 func getBakeArguments() []components.Argument {
 	return []components.Argument{
 		{
-			Name:        "run-folder",
-			Description: "The location of the root folder to run the process from",
-		},
-		{
-			Name:        "build-env",
-			Description: "The location of the \"oe-init-build-env\" to init the build env from",
-		},
-		{
 			Name:        "target",
 			Description: "The bake target. Examples: core-image-base, core-image-minimal",
 		},
@@ -92,6 +84,16 @@ func getBakeArguments() []components.Argument {
 
 func getBakeFlags() []components.Flag {
 	return []components.Flag{
+		components.StringFlag{
+			Name:         "run-folder",
+			Description:  "The location of the root folder to run the process from",
+			DefaultValue: ".",
+		},
+		components.StringFlag{
+			Name:         "build-env",
+			Description:  "The name of the \"oe-init-build-env\" to init the build env from",
+			DefaultValue: "oe-init-build-env",
+		},
 		components.BoolFlag{
 			Name:         "clean",
 			Description:  "Clean before the build, and clean the build-info on start",
@@ -118,27 +120,27 @@ func getBakeFlags() []components.Flag {
 			DefaultValue: defaultRepoName,
 		},
 		components.StringFlag{
-			Name:         "artifactName",
+			Name:         "artifact-name",
 			Description:  "Artifact name to deploy on to RT",
 			DefaultValue: "",
 		},
 		components.StringFlag{
-			Name:         "buildName",
+			Name:         "build-name",
 			Description:  "The build name",
 			DefaultValue: defaultBuildName,
 		},
 		components.StringFlag{
-			Name:         "buildNum",
+			Name:         "build-num",
 			Description:  "The build number",
 			DefaultValue: defaultBuildNum,
 		},
 		components.BoolFlag{
-			Name:         "onlyImages",
+			Name:         "only-images",
 			Description:  "Upload only the images as the artifacts of the build",
 			DefaultValue: true,
 		},
 		components.StringFlag{
-			Name:         "artId",
+			Name:         "art-id",
 			Description:  "The artifactory server ID",
 			DefaultValue: "",
 		},
@@ -166,23 +168,23 @@ type bakeConfiguration struct {
 }
 
 func bakeCmd(c *components.Context) error {
-	if len(c.Arguments) != 3 {
-		return errors.New("Wrong number of arguments. Expected: 3, " + "Received: " + strconv.Itoa(len(c.Arguments)))
+	if len(c.Arguments) != 1 {
+		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
 	}
 	var conf = new(bakeConfiguration)
-	conf.runFolder = c.Arguments[0]
-	conf.buildEnv = c.Arguments[1]
-	conf.target = c.Arguments[2]
+	conf.target = c.Arguments[0]
+	conf.runFolder = c.GetStringFlagValue("run-folder")
+	conf.buildEnv = c.GetStringFlagValue("build-env")
 	conf.clean = c.GetBoolFlagValue("clean")
 	conf.build = c.GetBoolFlagValue("build")
 	conf.load = c.GetBoolFlagValue("load")
 	conf.scan = c.GetBoolFlagValue("scan")
 	conf.repo = c.GetStringFlagValue("repo")
-	conf.artifactName = c.GetStringFlagValue("artifactName")
-	conf.buildName = c.GetStringFlagValue("buildName")
-	conf.buildNum = c.GetStringFlagValue("buildNum")
-	conf.onlyImages = c.GetBoolFlagValue("onlyImages")
-	conf.artId = c.GetStringFlagValue("artId")
+	conf.artifactName = c.GetStringFlagValue("artifact-name")
+	conf.buildName = c.GetStringFlagValue("build-name")
+	conf.buildNum = c.GetStringFlagValue("build-num")
+	conf.onlyImages = c.GetBoolFlagValue("only-images")
+	conf.artId = c.GetStringFlagValue("art-id")
 
 	if conf.scan && !conf.load {
 		return errors.New("scanning can only be done after loading the result to Artifactory")
