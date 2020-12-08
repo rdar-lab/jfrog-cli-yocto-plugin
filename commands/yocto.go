@@ -48,7 +48,7 @@ func GetConfigCommand() components.Command {
 		Flags:       []components.Flag{},
 		EnvVars:     []components.EnvVar{},
 		Action: func(c *components.Context) error {
-			return configCmd(c)
+			return configCmd()
 		},
 	}
 }
@@ -67,7 +67,7 @@ func GetBakeCommand() components.Command {
 	}
 }
 
-func configCmd(c *components.Context) error {
+func configCmd() error {
 	artConfigCommand := commands.NewConfigCommand()
 	artConfigCommand.SetInteractive(true)
 	return artConfigCommand.Run()
@@ -152,21 +152,47 @@ func getBakeEnvVar() []components.EnvVar {
 }
 
 type bakeConfiguration struct {
-	runFolder    string
-	buildEnv     string
-	target       string
-	clean        bool
-	build        bool
-	load         bool
-	scan         bool
-	buildName    string
-	buildNum     string
-	repo         string
+	// The folder to run the commands from (i.e. working folder)
+	runFolder string
+
+	// The name of the bash script to run to init the build environment variables
+	buildEnv string
+
+	// Build target, see yocto/bitbake documentation
+	target string
+
+	// Clean the tmp build folder, and the build-info before performing the other commands
+	clean bool
+
+	// Perform the build. This will trigger the call to the bitbake command
+	build bool
+
+	// Load the result to artifactory. The results will be loaded as an artifact (for the result files), and build-info
+	load bool
+
+	// Scan the result with Xray
+	scan bool
+
+	// The  build name to use
+	buildName string
+
+	// The build number to use
+	buildNum string
+
+	// The repository name to deploy to
+	repo string
+
+	// The artifact name to use, if empty a default name will be generated based on the other configuration parameters
 	artifactName string
-	onlyImages   bool
-	artId        string
+
+	// Deploy only the resulting images to artifactory, if false it will deploy all the 'deploy' folder content
+	onlyImages bool
+
+	// The identification of artifactory configuration to use for the connection
+	artId string
 }
 
+// Handler for the bakeCmd, reads the configuration, validates it and calls the doBakeCommand
 func bakeCmd(c *components.Context) error {
 	if len(c.Arguments) != 1 {
 		return errors.New("Wrong number of arguments. Expected: 1, " + "Received: " + strconv.Itoa(len(c.Arguments)))
@@ -208,7 +234,9 @@ func bakeCmd(c *components.Context) error {
 	return nil
 }
 
+// The main logic handler for the bakeCommand
 func doBakeCommand(conf *bakeConfiguration) error {
+	// If the build flag is enabled we will execute the pre-steps (usually clean if enabled) and the build
 	if conf.build {
 		err := executePreSteps(conf)
 		if err != nil {
@@ -221,7 +249,9 @@ func doBakeCommand(conf *bakeConfiguration) error {
 		}
 	}
 
+	// If the load flag is enabled we will deploy the results to artifactory
 	if conf.load {
+		// Calculate the artifactory configuration
 		artConfExists, err := config.IsArtifactoryConfExists()
 
 		if err != nil {
@@ -248,13 +278,15 @@ func doBakeCommand(conf *bakeConfiguration) error {
 			}
 		}
 
+		// Load/deploy results to RT
 		err = loadResultToRT(conf, rtDetails)
 		if err != nil {
 			return err
 		}
 
+		// Scan with Xray
 		if conf.scan {
-			err = scanResults(conf, rtDetails)
+			err = scanResults()
 			if err != nil {
 				return err
 			}
@@ -264,6 +296,7 @@ func doBakeCommand(conf *bakeConfiguration) error {
 	return nil
 }
 
+// Exec external command (with bash -c)
 func execCommand(folder string, command string) error {
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Dir = folder
@@ -272,6 +305,7 @@ func execCommand(folder string, command string) error {
 	return cmd.Run()
 }
 
+// Pre-steps for the build stage. Performs clean if enabled
 func executePreSteps(conf *bakeConfiguration) error {
 	log.Output("Running pre steps. Running directory=" + conf.runFolder)
 
@@ -291,16 +325,20 @@ func executePreSteps(conf *bakeConfiguration) error {
 	return nil
 }
 
+// Execute the bitbake build stage
 func executeBitBakeBuild(conf *bakeConfiguration) error {
 	log.Output("Running Bit bake. target=" + conf.target + ". This may take a long time....")
 	return execCommand(conf.runFolder, "source "+conf.buildEnv+" && bitbake "+conf.target)
 }
 
+// Loads/Deploy results to artifactory
 func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ArtifactoryDetails) error {
 	log.Output("Loading the result to Artifactory")
 
+	// Generate the general build configuration
 	buildConf := generateBuildConfiguration(conf)
 
+	// Clears aggregated local cache of build-info
 	if conf.clean {
 		err := cleanBuildInfo(buildConf)
 		if err != nil {
@@ -308,17 +346,20 @@ func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ArtifactoryDetail
 		}
 	}
 
+	// Upload the artifact
 	buildPath, err := uploadBuildArtifact(conf, buildConf, rtDetails)
 	if err != nil {
 		return err
 	}
 
+	// Calculate the build-info dependencies
 	err = loadDependencies(conf, buildConf)
 	if err != nil {
 		return err
 	}
 
-	err = publishBuildInfo(conf, buildPath, buildConf, rtDetails)
+	// Publish the build
+	err = publishBuildInfo(buildPath, buildConf, rtDetails)
 	if err != nil {
 		return err
 	}
@@ -326,7 +367,8 @@ func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ArtifactoryDetail
 	return nil
 }
 
-func publishBuildInfo(conf *bakeConfiguration, buildURL string, buildConf *utils.BuildConfiguration, rtDetails *config.ArtifactoryDetails) error {
+// Publish build-info to artifactory
+func publishBuildInfo(buildURL string, buildConf *utils.BuildConfiguration, rtDetails *config.ArtifactoryDetails) error {
 	artAuthDetails, err := rtDetails.CreateArtAuthConfig()
 	if err != nil {
 		return err
@@ -344,6 +386,7 @@ func publishBuildInfo(conf *bakeConfiguration, buildURL string, buildConf *utils
 	return publishCommand.Run()
 }
 
+// Upload the artifact files to artifactory
 func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ArtifactoryDetails) (string, error) {
 	uploadCommand := generic.NewUploadCommand()
 
@@ -374,6 +417,7 @@ func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfigur
 		Target(target).
 		Recursive(true).
 		IncludeDirs(true).
+		Flat(conf.onlyImages).
 		BuildSpec()
 
 	uploadCommand.SetRtDetails(rtDetails)
@@ -390,8 +434,9 @@ func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfigur
 	return target, uploadCommand.Run()
 }
 
+// Load the build-info dependencies of the build
 func loadDependencies(conf *bakeConfiguration, buildConf *utils.BuildConfiguration) error {
-	deps, err := loadDependenciesFromManifest(conf)
+	deps, err := parseDependenciesFromManifest(conf)
 
 	if err != nil {
 		return err
@@ -412,6 +457,7 @@ func loadDependencies(conf *bakeConfiguration, buildConf *utils.BuildConfigurati
 	}
 }
 
+// Checks if the 'dep' dependency already exists in the 'dependencies' list
 func contains(dependencies []rtBuildInfo.Dependency, dep rtBuildInfo.Dependency) bool {
 	for _, compDep := range dependencies {
 		if compDep.Id == dep.Id {
@@ -421,7 +467,8 @@ func contains(dependencies []rtBuildInfo.Dependency, dep rtBuildInfo.Dependency)
 	return false
 }
 
-func loadDependenciesFromManifest(conf *bakeConfiguration) ([]rtBuildInfo.Dependency, error) {
+// Parses the dependencies from the Yocto manifest file/s and returns the full list
+func parseDependenciesFromManifest(conf *bakeConfiguration) ([]rtBuildInfo.Dependency, error) {
 	resultDeps := make([]rtBuildInfo.Dependency, 0)
 	manifestFiles, err := findManifestFiles(conf.runFolder)
 	if err != nil {
@@ -435,35 +482,42 @@ func loadDependenciesFromManifest(conf *bakeConfiguration) ([]rtBuildInfo.Depend
 		}
 
 		dataStr := string(data)
-		depsLines := strings.Split(dataStr, "\n")
-
-		for _, depLine := range depsLines {
-			depLine = strings.TrimSpace(depLine)
-			if depLine != "" {
-				depParts := strings.Split(depLine, " ")
-				if len(depParts) == 3 {
-					depId := depParts[0] + ":" + depParts[2]
-					hasher := sha1.New()
-					hasher.Write([]byte(depId))
-					sha := hex.EncodeToString(hasher.Sum(nil))
-
-					dep := rtBuildInfo.Dependency{
-						Id:       depId,
-						Checksum: &rtBuildInfo.Checksum{Sha1: sha},
-						Type:     "os-package",
-						Scopes:   []string{depParts[1]},
-					}
-					if !contains(resultDeps, dep) {
-						resultDeps = append(resultDeps, dep)
-					}
-				}
-			}
-		}
+		resultDeps = parseManifestContent(dataStr, resultDeps)
 	}
 
 	return resultDeps, nil
 }
 
+// Parses the manifestContent in the input str, adds dependencies which are not already detected, and returns the updated slice
+func parseManifestContent(dataStr string, resultDeps []rtBuildInfo.Dependency) []rtBuildInfo.Dependency {
+	depsLines := strings.Split(dataStr, "\n")
+
+	for _, depLine := range depsLines {
+		depLine = strings.TrimSpace(depLine)
+		if depLine != "" {
+			depParts := strings.Split(depLine, " ")
+			if len(depParts) == 3 {
+				depId := depParts[0] + ":" + depParts[2]
+				hasher := sha1.New()
+				hasher.Write([]byte(depId))
+				sha := hex.EncodeToString(hasher.Sum(nil))
+
+				dep := rtBuildInfo.Dependency{
+					Id:       depId,
+					Checksum: &rtBuildInfo.Checksum{Sha1: sha},
+					Type:     "os-package",
+					Scopes:   []string{depParts[1]},
+				}
+				if !contains(resultDeps, dep) {
+					resultDeps = append(resultDeps, dep)
+				}
+			}
+		}
+	}
+	return resultDeps
+}
+
+// Lookup files matching a pattern within a specific root directory
 func walkMatch(root, pattern string) ([]string, error) {
 	var matches []string
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
@@ -487,6 +541,7 @@ func walkMatch(root, pattern string) ([]string, error) {
 	return matches, nil
 }
 
+// Look for the Yocto manifest files within the deployment images directory
 func findManifestFiles(folder string) ([]string, error) {
 	results, err := walkMatch(folder+imagesDirectory, "*.manifest")
 	if err != nil {
@@ -498,6 +553,7 @@ func findManifestFiles(folder string) ([]string, error) {
 	return results, nil
 }
 
+// Generate a build configuration
 func generateBuildConfiguration(conf *bakeConfiguration) *utils.BuildConfiguration {
 	buildConfiguration := utils.BuildConfiguration{
 		BuildName:   conf.buildName,
@@ -508,13 +564,15 @@ func generateBuildConfiguration(conf *bakeConfiguration) *utils.BuildConfigurati
 	return &buildConfiguration
 }
 
+// Executes a build-info clear command to clear the local cache of build-info on the specific build
 func cleanBuildInfo(buildConf *utils.BuildConfiguration) error {
 	cleanCommand := buildinfo.NewBuildCleanCommand()
 	cleanCommand.SetBuildConfiguration(buildConf)
 	return cleanCommand.Run()
 }
 
-func scanResults(conf *bakeConfiguration, details *config.ArtifactoryDetails) error {
+// Xray scan - to be implemented in the future
+func scanResults() error {
 	log.Output("Scanning results")
 	return errors.New("xray scanning is not yet supported")
 }
