@@ -17,6 +17,12 @@ With the jfrog platform you can control the lifecycle and distribution of the Io
  * Easy integration with one command to invoke the full process
  * Ability to deploy the artifacts to Artifactory and scan with Xray 
 
+This plugin supports the following options:
+* One command, clean, build, deploy **[ default, no flags are required ]**
+* Continue build after failure without clean **[ use flag --clean=false ]**
+* Build externally, use plugin only to deploy the artifacts **[ use flag --build=false ]**
+* Build only, do not deploy to RT afterwards **[ use flag --load=false ]** 
+
 ## Using with docker
 
 Using it with docker make it easier.
