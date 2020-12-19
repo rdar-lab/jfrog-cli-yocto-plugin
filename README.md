@@ -1,4 +1,4 @@
-# jfrog-cli-yocto-plugin
+# jfrog-yocto CLI Plugin
 
 ## About this plugin
 This plugin allows integrating Yocto builds to Jfrog platform.
@@ -41,13 +41,17 @@ The docker image is based on gmacario/build-yocto which provides all the build-i
                     core-image-minimal
 
 ## Installation with JFrog CLI
-Since this plugin is currently not included in [JFrog CLI Plugins Registry](https://github.com/jfrog/jfrog-cli-plugins-reg), it needs to be built and installed manually. Follow these steps to install and use this plugin with JFrog CLI.
-1. Make sure JFrog CLI is installed on you machine by running ```jfrog```. If it is not installed, [install](https://jfrog.com/getcli/) it.
-2. Create a directory named ```plugins``` under ```~/.jfrog/``` if it does not exist already.
-3. Clone this repository.
-4. CD into the root directory of the cloned project.
-5. Run ```go build``` to create the binary in the current directory.
-6. Copy the binary into the ```~/.jfrog/plugins``` directory.
+Installing the latest version:
+
+`$ jfrog plugin install jfrog-yocto`
+
+Installing a specific version:
+
+`$ jfrog plugin install jfrog-yocto@version`
+
+Uninstalling a plugin
+
+`$ jfrog plugin uninstall jfrog-yocto`
 
 ## Usage
 ### Commands
@@ -74,7 +78,7 @@ Since this plugin is currently not included in [JFrog CLI Plugins Registry](http
             
     - Example:
     ```
-  $ jfrog jfrog-cli-yocto-plugin bake core-image-minimal
+  $ jfrog jfrog-yocto bake core-image-minimal
   
     Running pre steps. Running directory=./
     Running Bit bake. target=core-image-minimal. This may take a long time....
