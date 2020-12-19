@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/jfrog/jfrog-cli-core/artifactory/commands"
 	"github.com/jfrog/jfrog-cli-core/artifactory/commands/buildinfo"
 	"github.com/jfrog/jfrog-cli-core/artifactory/commands/generic"
 	"github.com/jfrog/jfrog-cli-core/artifactory/spec"
@@ -39,20 +38,6 @@ const (
 	uploadRetries = 5
 )
 
-func GetConfigCommand() components.Command {
-	return components.Command{
-		Name:        "config",
-		Description: "Configure artifactory settings",
-		Aliases:     []string{"conf"},
-		Arguments:   []components.Argument{},
-		Flags:       []components.Flag{},
-		EnvVars:     []components.EnvVar{},
-		Action: func(c *components.Context) error {
-			return configCmd()
-		},
-	}
-}
-
 func GetBakeCommand() components.Command {
 	return components.Command{
 		Name:        "bake",
@@ -65,12 +50,6 @@ func GetBakeCommand() components.Command {
 			return bakeCmd(c)
 		},
 	}
-}
-
-func configCmd() error {
-	artConfigCommand := commands.NewConfigCommand()
-	artConfigCommand.SetInteractive(true)
-	return artConfigCommand.Run()
 }
 
 func getBakeArguments() []components.Argument {

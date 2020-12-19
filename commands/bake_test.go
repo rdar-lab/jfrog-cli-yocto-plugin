@@ -1,7 +1,6 @@
 package commands
 
 import (
-	//"github.com/stretchr/testify/assert"
 	"github.com/jfrog/jfrog-client-go/artifactory/buildinfo"
 	"github.com/stretchr/testify/assert"
 	"testing"
