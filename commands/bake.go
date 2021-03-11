@@ -231,7 +231,7 @@ func doBakeCommand(conf *bakeConfiguration) error {
 	// If the load flag is enabled we will deploy the results to artifactory
 	if conf.load {
 		// Calculate the artifactory configuration
-		artConfExists, err := config.IsArtifactoryConfExists()
+		artConfExists, err := config.IsServerConfExists()
 
 		if err != nil {
 			return err
@@ -241,16 +241,16 @@ func doBakeCommand(conf *bakeConfiguration) error {
 			return errors.New("artifactory details are not set. please use 'conf' command first")
 		}
 
-		var rtDetails *config.ArtifactoryDetails
+		var rtDetails *config.ServerDetails
 
 		if conf.artId != "" {
-			rtDetails, err = config.GetArtifactorySpecificConfig(conf.artId, false, false)
+			rtDetails, err = config.GetSpecificConfig(conf.artId, false, false)
 
 			if err != nil {
 				return err
 			}
 		} else {
-			rtDetails, err = config.GetDefaultArtifactoryConf()
+			rtDetails, err = config.GetDefaultServerConf()
 
 			if err != nil {
 				return err
@@ -311,7 +311,7 @@ func executeBitBakeBuild(conf *bakeConfiguration) error {
 }
 
 // Loads/Deploy results to artifactory
-func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ArtifactoryDetails) error {
+func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ServerDetails) error {
 	log.Output("Loading the result to Artifactory")
 
 	// Generate the general build configuration
@@ -347,7 +347,7 @@ func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ArtifactoryDetail
 }
 
 // Publish build-info to artifactory
-func publishBuildInfo(buildURL string, buildConf *utils.BuildConfiguration, rtDetails *config.ArtifactoryDetails) error {
+func publishBuildInfo(buildURL string, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) error {
 	artAuthDetails, err := rtDetails.CreateArtAuthConfig()
 	if err != nil {
 		return err
@@ -355,7 +355,7 @@ func publishBuildInfo(buildURL string, buildConf *utils.BuildConfiguration, rtDe
 
 	publishCommand := buildinfo.NewBuildPublishCommand()
 	publishCommand.SetBuildConfiguration(buildConf)
-	publishCommand.SetRtDetails(rtDetails)
+	publishCommand.SetServerDetails(rtDetails)
 	publishCommand.SetConfig(
 		&rtBuildInfo.Configuration{
 			ArtDetails: artAuthDetails,
@@ -366,7 +366,7 @@ func publishBuildInfo(buildURL string, buildConf *utils.BuildConfiguration, rtDe
 }
 
 // Upload the artifact files to artifactory
-func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ArtifactoryDetails) (string, error) {
+func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) (string, error) {
 	uploadCommand := generic.NewUploadCommand()
 
 	var artifactFile string
@@ -399,14 +399,13 @@ func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfigur
 		Flat(conf.onlyImages).
 		BuildSpec()
 
-	uploadCommand.SetRtDetails(rtDetails)
+	uploadCommand.SetServerDetails(rtDetails)
 	uploadCommand.SetSpec(uploadSpec)
 	uploadCommand.SetBuildConfiguration(buildConf)
 	uploadCommand.SetUploadConfiguration(
 		&utils.UploadConfiguration{
 			Threads: uploadThreads,
 			Retries: uploadRetries,
-			Symlink: true,
 		},
 	)
 
@@ -426,11 +425,11 @@ func loadDependencies(conf *bakeConfiguration, buildConf *utils.BuildConfigurati
 		buildInfo := &rtBuildInfo.BuildInfo{}
 		var modules []rtBuildInfo.Module
 		// Save build-info.
-		module := rtBuildInfo.Module{Id: buildConf.Module, Dependencies: deps}
+		module := rtBuildInfo.Module{Id: buildConf.Module, Dependencies: deps, Type: "cpp"}
 		modules = append(modules, module)
 
 		buildInfo.Modules = modules
-		return utils.SaveBuildInfo(buildConf.BuildName, buildConf.BuildNumber, buildInfo)
+		return utils.SaveBuildInfo(buildConf.BuildName, buildConf.BuildNumber, "", buildInfo)
 	} else {
 		return nil
 	}
