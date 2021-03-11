@@ -30,7 +30,7 @@ const (
 	defaultProject   = ""
 
 	tmpDirectory    = "/build/tmp"
-	lockFile        = "/build/bitbake.lock"
+	lockFiles       = "/build/bitbake.lock,/build/bitbake.sock,/build/hashserve.sock"
 	deployDirectory = "/build/tmp/deploy/"
 	imagesDirectory = "/build/tmp/deploy/images/"
 
@@ -295,9 +295,11 @@ func executePreSteps(conf *bakeConfiguration) error {
 			return err
 		}
 
-		err = os.Remove(conf.runFolder + lockFile)
-		if err != nil && !os.IsNotExist(err) {
-			return err
+		for _, lockFile := range strings.Split(lockFiles, ",") {
+			err = os.Remove(conf.runFolder + lockFile)
+			if err != nil && !os.IsNotExist(err) {
+				return err
+			}
 		}
 	}
 
