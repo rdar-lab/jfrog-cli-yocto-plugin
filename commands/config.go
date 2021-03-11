@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/jfrog/jfrog-cli-core/artifactory/commands"
+	"github.com/jfrog/jfrog-cli-core/common/commands"
 	"github.com/jfrog/jfrog-cli-core/plugins/components"
 )
 
