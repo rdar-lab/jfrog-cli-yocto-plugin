@@ -38,7 +38,7 @@ The docker image is based on gmacario/build-yocto which provides all the build-i
     4. RUN: docker run --rm -it jfrog-yocto-builder \
                    -v [YOCTO_WORKSPACE_LOCAL_FOLDER]:/home/build/workspace \
                    -v [USER_HOMEDIR]/.jfrog:/home/build/.frog \
-                    core-image-minimal
+                    bake core-image-minimal
 
 ## Installation with JFrog CLI
 Installing the latest version:
