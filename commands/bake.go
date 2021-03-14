@@ -284,13 +284,33 @@ func execCommand(folder string, command string) error {
 	return cmd.Run()
 }
 
+func removeContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	//goland:noinspection GoUnhandledErrorResult
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Pre-steps for the build stage. Performs clean if enabled
 func executePreSteps(conf *bakeConfiguration) error {
 	log.Output("Running pre steps. Running directory=" + conf.runFolder)
 
 	if conf.clean {
 		log.Output("Cleaning tmp folder")
-		err := os.RemoveAll(conf.runFolder + tmpDirectory)
+		err := removeContents(conf.runFolder + tmpDirectory)
 		if err != nil {
 			return err
 		}
