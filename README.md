@@ -35,9 +35,12 @@ The docker image is based on gmacario/build-yocto which provides all the build-i
         Example: git clone -b jethro git://git.yoctoproject.org/poky
     3. Make sure you have a proper artifactory configururation on your running machine.
         Use 'jfrog rt config' to configure your server IP and authentication
+    3. Create a tmp volume (this is required if running from MacOS due to filesystem limitations).
+       RUN: docker volume create --driver local --name yoctotmp --opt type=tmpfs --opt device=tmpfs
     4. RUN: docker run --rm -it \
                    -v [YOCTO_WORKSPACE_LOCAL_FOLDER]:/home/build/workspace \
                    -v [USER_HOMEDIR]/.jfrog:/home/build/.frog \
+                   -v yoctotmp:/home/build/workspace/build/tmp
                     jfrog-yocto-builder bake core-image-minimal
 
 ## Installation with JFrog CLI
