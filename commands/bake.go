@@ -348,7 +348,6 @@ func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ServerDetails, st
 			return err
 		}
 	}
-	defer utils.RemoveBuildDir(buildConf.BuildName, buildConf.BuildNumber, "")
 
 	artifacts, err := handleBuildArtifacts(conf, buildConf, rtDetails)
 	if err != nil {
@@ -360,17 +359,32 @@ func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ServerDetails, st
 		return err
 	}
 
-	err = publishBuildInfo(buildConf, rtDetails, artifacts, dependencies, startedTime)
+	err = createAndSaveBuildInfo(buildConf, artifacts, dependencies, startedTime)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return publishBuildInfo(buildConf, rtDetails)
 }
 
-// Publish build-info to artifactory
-func publishBuildInfo(buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails, artifacts []rtBuildInfo.Artifact,
-	dependencies []rtBuildInfo.Dependency, startedTime string) error {
+func publishBuildInfo(buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) error {
+	artAuthDetails, err := rtDetails.CreateArtAuthConfig()
+	if err != nil {
+		return err
+	}
+	publishCommand := buildinfo.NewBuildPublishCommand()
+	publishCommand.SetBuildConfiguration(buildConf)
+	publishCommand.SetServerDetails(rtDetails)
+	publishCommand.SetConfig(
+		&rtBuildInfo.Configuration{
+			ArtDetails: artAuthDetails,
+		},
+	)
+	return publishCommand.Run()
+}
+
+// Create and save build-info
+func createAndSaveBuildInfo(buildConf *utils.BuildConfiguration, artifacts []rtBuildInfo.Artifact, dependencies []rtBuildInfo.Dependency, startedTime string) error {
 	// Construct the build module
 	var modules []rtBuildInfo.Module
 	module := rtBuildInfo.Module{Id: buildConf.Module, Type: "cpp", Artifacts: artifacts, Dependencies: dependencies}
@@ -383,12 +397,7 @@ func publishBuildInfo(buildConf *utils.BuildConfiguration, rtDetails *config.Ser
 	buildInfo.Started = startedTime
 	buildInfo.Modules = modules
 
-	// Publish
-	rtManager, err := utils.CreateServiceManager(rtDetails, false)
-	if err != nil {
-		return err
-	}
-	return rtManager.PublishBuildInfo(buildInfo, buildConf.Project)
+	return utils.SaveBuildInfo(buildConf.BuildName, buildConf.BuildNumber, buildConf.Project, buildInfo)
 }
 
 func handleBuildArtifacts(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) ([]rtBuildInfo.Artifact, error) {
