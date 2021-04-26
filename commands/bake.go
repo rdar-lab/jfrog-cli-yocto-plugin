@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -215,6 +216,7 @@ func bakeCmd(c *components.Context) error {
 
 // The main logic handler for the bakeCommand
 func doBakeCommand(conf *bakeConfiguration) error {
+	startedTime := time.Now().Format(rtBuildInfo.TimeFormat)
 	// If the build flag is enabled we will execute the pre-steps (usually clean if enabled) and the build
 	if conf.build {
 		err := executePreSteps(conf)
@@ -258,7 +260,7 @@ func doBakeCommand(conf *bakeConfiguration) error {
 		}
 
 		// Load/deploy results to RT
-		err = loadResultToRT(conf, rtDetails)
+		err = loadResultToRT(conf, rtDetails, startedTime)
 		if err != nil {
 			return err
 		}
@@ -333,7 +335,7 @@ func executeBitBakeBuild(conf *bakeConfiguration) error {
 }
 
 // Loads/Deploy results to artifactory
-func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ServerDetails) error {
+func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ServerDetails, startedTime string) error {
 	log.Output("Loading the result to Artifactory")
 
 	// Generate the general build configuration
@@ -347,48 +349,68 @@ func loadResultToRT(conf *bakeConfiguration, rtDetails *config.ServerDetails) er
 		}
 	}
 
-	// Upload the artifact
-	buildPath, err := uploadBuildArtifact(conf, buildConf, rtDetails)
+	artifacts, err := handleBuildArtifacts(conf, buildConf, rtDetails)
 	if err != nil {
 		return err
 	}
 
-	// Calculate the build-info dependencies
-	err = loadDependencies(conf, buildConf)
+	dependencies, err := parseDependenciesFromManifest(conf)
 	if err != nil {
 		return err
 	}
 
-	// Publish the build
-	err = publishBuildInfo(buildPath, buildConf, rtDetails)
+	err = createAndSaveBuildInfo(buildConf, artifacts, dependencies, startedTime)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	return publishBuildInfo(buildConf, rtDetails)
 }
 
-// Publish build-info to artifactory
-func publishBuildInfo(buildURL string, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) error {
+func publishBuildInfo(buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) error {
 	artAuthDetails, err := rtDetails.CreateArtAuthConfig()
 	if err != nil {
 		return err
 	}
-
 	publishCommand := buildinfo.NewBuildPublishCommand()
 	publishCommand.SetBuildConfiguration(buildConf)
 	publishCommand.SetServerDetails(rtDetails)
 	publishCommand.SetConfig(
 		&rtBuildInfo.Configuration{
 			ArtDetails: artAuthDetails,
-			BuildUrl:   buildURL,
 		},
 	)
 	return publishCommand.Run()
 }
 
+// Create and save build-info
+func createAndSaveBuildInfo(buildConf *utils.BuildConfiguration, artifacts []rtBuildInfo.Artifact, dependencies []rtBuildInfo.Dependency, startedTime string) error {
+	// Construct the build module
+	var modules []rtBuildInfo.Module
+	module := rtBuildInfo.Module{Id: buildConf.Module, Type: "cpp", Artifacts: artifacts, Dependencies: dependencies}
+	modules = append(modules, module)
+
+	// Set properties
+	buildInfo := &rtBuildInfo.BuildInfo{}
+	buildInfo.Name = buildConf.BuildName
+	buildInfo.Number = buildConf.BuildNumber
+	buildInfo.Started = startedTime
+	buildInfo.Modules = modules
+
+	return utils.SaveBuildInfo(buildConf.BuildName, buildConf.BuildNumber, buildConf.Project, buildInfo)
+}
+
+func handleBuildArtifacts(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) ([]rtBuildInfo.Artifact, error) {
+	var artifacts []rtBuildInfo.Artifact
+	err := uploadBuildArtifact(conf, buildConf, rtDetails)
+	if err != nil {
+		return artifacts, err
+	}
+	return getDeployedBuildInfoArtifacts(buildConf)
+}
+
 // Upload the artifact files to artifactory
-func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) (string, error) {
+func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfiguration, rtDetails *config.ServerDetails) error {
 	uploadCommand := generic.NewUploadCommand()
 
 	var artifactFile string
@@ -402,7 +424,7 @@ func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfigur
 	_, err := fileutils.GetFileInfo(artifactFile, false)
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	repoName := conf.repo
@@ -431,30 +453,17 @@ func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfigur
 		},
 	)
 
-	return target, uploadCommand.Run()
+	return uploadCommand.Run()
 }
 
-// Load the build-info dependencies of the build
-func loadDependencies(conf *bakeConfiguration, buildConf *utils.BuildConfiguration) error {
-	deps, err := parseDependenciesFromManifest(conf)
-
-	if err != nil {
-		return err
+// Extract the deployed artifacts from the partial file.
+// Build artifacts were deployed by the upload-command, and build-info was produced and saved as Partial on the file-system.
+func getDeployedBuildInfoArtifacts(buildConf *utils.BuildConfiguration) ([]rtBuildInfo.Artifact, error) {
+	uploadPartials, err := utils.ReadPartialBuildInfoFiles(buildConf.BuildName, buildConf.BuildNumber, "")
+	if len(uploadPartials) < 1 || len(uploadPartials[0].Artifacts) < 1 || err != nil {
+		return nil, err
 	}
-
-	if deps != nil {
-
-		buildInfo := &rtBuildInfo.BuildInfo{}
-		var modules []rtBuildInfo.Module
-		// Save build-info.
-		module := rtBuildInfo.Module{Id: buildConf.Module, Dependencies: deps, Type: "cpp"}
-		modules = append(modules, module)
-
-		buildInfo.Modules = modules
-		return utils.SaveBuildInfo(buildConf.BuildName, buildConf.BuildNumber, "", buildInfo)
-	} else {
-		return nil
-	}
+	return uploadPartials[0].Artifacts, nil
 }
 
 // Checks if the 'dep' dependency already exists in the 'dependencies' list
