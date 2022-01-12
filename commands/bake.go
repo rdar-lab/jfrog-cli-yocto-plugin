@@ -36,7 +36,6 @@ const (
 	imagesDirectory = "/build/tmp/deploy/images/"
 
 	uploadThreads = 10
-	uploadRetries = 5
 )
 
 func GetBakeCommand() components.Command {
@@ -449,7 +448,6 @@ func uploadBuildArtifact(conf *bakeConfiguration, buildConf *utils.BuildConfigur
 	uploadCommand.SetUploadConfiguration(
 		&utils.UploadConfiguration{
 			Threads: uploadThreads,
-			Retries: uploadRetries,
 		},
 	)
 
