@@ -34,7 +34,7 @@ The docker image is based on gmacario/build-yocto which provides all the build-i
     2. git clone your yocto project src files to your local machine. 
         Example: git clone -b jethro git://git.yoctoproject.org/poky
     3. Make sure you have a proper artifactory configururation on your running machine.
-        Use 'jfrog rt config' to configure your server IP and authentication
+        Use 'jf c add' to configure your server IP and authentication
     4. Create a tmp volume (this is required if running from MacOS due to filesystem limitations).
        RUN: docker volume create --driver local --opt type=tmpfs --opt device=tmpfs --opt o=size=30000m,mode=1777 yoctotmp
     5. RUN: docker run --rm -it \
@@ -46,15 +46,15 @@ The docker image is based on gmacario/build-yocto which provides all the build-i
 ## Installation with JFrog CLI
 Installing the latest version:
 
-`$ jfrog plugin install jfrog-yocto`
+`$ jf plugin install jfrog-yocto`
 
 Installing a specific version:
 
-`$ jfrog plugin install jfrog-yocto@version`
+`$ jf plugin install jfrog-yocto@version`
 
 Uninstalling a plugin
 
-`$ jfrog plugin uninstall jfrog-yocto`
+`$ jf plugin uninstall jfrog-yocto`
 
 ## Usage
 ### Commands
@@ -81,7 +81,7 @@ Uninstalling a plugin
             
     - Example:
     ```
-  $ jfrog jfrog-yocto bake core-image-minimal
+  $ jf jfrog-yocto bake core-image-minimal
   
     Running pre steps. Running directory=./
     Running Bit bake. target=core-image-minimal. This may take a long time....
